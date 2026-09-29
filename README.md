@@ -4,8 +4,8 @@
 > no GPU, no tokenizer, no server). One call, fully offline after the first run.
 
 [![CI](https://github.com/Ichkil/ichkil-python/actions/workflows/ci.yml/badge.svg)](https://github.com/Ichkil/ichkil-python/actions/workflows/ci.yml)
-[![PyPI](https://img.shields.io/pypi/v/ichkil.svg)](https://pypi.org/project/ichkil/)
-[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichkil.svg)](https://pypi.org/project/ichkil/)
+[![PyPI](https://img.shields.io/pypi/v/ichkil)](https://pypi.org/project/ichkil/)
+[![PyPI - Python Version](https://img.shields.io/pypi/pyversions/ichkil)](https://pypi.org/project/ichkil/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Hugging Face model](https://img.shields.io/badge/%F0%9F%A4%97_model-ichkil%2Fichkil-yellow)](https://huggingface.co/ichkil/ichkil)
 [![Try it in your browser](https://img.shields.io/badge/%F0%9F%A4%97_try%20it-ichkil%2Fichkil%2Ddemo-blue)](https://huggingface.co/spaces/ichkil/ichkil-demo)
