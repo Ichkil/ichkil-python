@@ -21,6 +21,11 @@ import ichkil
 from ichkil import ChecksumError, Diacritizer, IchkilError
 from ichkil.download import resolve_model, verify_checksum
 
+# The whole module exercises the real model (the ``diacritizer`` fixture
+# downloads it on first use). Keep it out of the pure-pipeline job so CI can
+# run ``pytest -m "not integration"`` without network access.
+pytestmark = pytest.mark.integration
+
 GOLDEN = json.loads((Path(__file__).parent / "golden.json").read_text(encoding="utf-8"))
 VECTORS = GOLDEN["vectors"]
 LONG_VECTOR = next(v for v in VECTORS if v["category"] == "long")
