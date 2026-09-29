@@ -1,0 +1,88 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff
+      - name: Ruff (lint)
+        run: ruff check src tests examples
+      - name: Ruff (format check)
+        run: ruff format --check src tests examples
+
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.9", "3.10", "3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]"
+      - name: Test (pure pipeline — no network)
+        run: pytest -m "not integration" --cov --cov-report=xml
+      - name: Test (integration — downloads model once, ~5 MB)
+        run: pytest -m integration
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, test]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install build frontend
+        run: python -m pip install --upgrade pip build
+      - name: Build sdist + wheel
+        run: python -m build
+      - name: Verify wheel metadata
+        run: |
+          python - <<'PY'
+          import glob, zipfile
+          whl = sorted(glob.glob("dist/*.whl"))[-1]
+          with zipfile.ZipFile(whl) as z:
+              names = z.namelist()
+          assert any(n.startswith("ichkil/") for n in names), "package dir missing"
+          assert "ichkil/py.typed" in names, "py.typed marker missing"
+          print("wheel OK:", whl)
+          PY
+      - name: Verify sdist
+        run: |
+          python - <<'PY'
+          import glob, tarfile
+          sdist = sorted(glob.glob("dist/*.tar.gz"))[-1]
+          with tarfile.open(sdist) as t:
+              names = t.getnames()
+          assert any(n.endswith("pyproject.toml") for n in names)
+          print("sdist OK:", sdist)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/

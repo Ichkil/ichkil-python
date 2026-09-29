@@ -1,0 +1,79 @@
+[build-system]
+requires = ["hatchling>=1.21"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ichkil"
+version = "1.0.0"
+description = "Arabic Tashkeel (diacritization) — a tiny, self-contained ONNX model with a clean Python API"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Maaouia BenHamed" }]
+keywords = [
+  "arabic",
+  "tashkeel",
+  "diacritization",
+  "diacritics",
+  "harakat",
+  "nlp",
+  "onnx",
+  "onnxruntime",
+  "cpu",
+  "lightweight",
+]
+classifiers = [
+  "Development Status :: 5 - Production/Stable",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+  "Topic :: Text Processing :: Linguistic",
+]
+dependencies = [
+  "huggingface_hub>=0.24",
+  "onnxruntime>=1.19,<2",
+]
+
+[project.optional-dependencies]
+dev = [
+  "build>=1.2",
+  "pytest>=7",
+  "pytest-cov>=4",
+  "ruff>=0.4",
+]
+
+[project.scripts]
+ichkil = "ichkil.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/Ichkil/ichkil-python"
+Repository = "https://github.com/Ichkil/ichkil-python"
+Issues = "https://github.com/Ichkil/ichkil-python/issues"
+"Hugging Face" = "https://huggingface.co/ichkil/ichkil"
+"Live demo (browser)" = "https://huggingface.co/spaces/ichkil/ichkil-demo"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ichkil"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
+markers = [
+  "integration: downloads the model from Hugging Face on first use (deselect with -m 'not integration')",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py39"
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4"]
+
+[tool.coverage.run]
+source = ["ichkil"]
