@@ -25,6 +25,8 @@ ichkil.diacritize("محمد قرأ الكتاب في المدرسة")
 
 ```bash
 pip install ichkil
+# or
+uv add ichkil
 ```
 
 Requires Python ≥ 3.9 (tested on 3.9 – 3.12). Dependencies: `huggingface_hub`,
@@ -136,4 +138,4 @@ Publishing → Add a publisher* with `github.com/Ichkil/ichkil-python`,
 
 ## License
 
-[MIT](LICENSE) © 2026 Maaouia BenHamed
+MIT — [LICENSE](LICENSE) · [github.com/Ichkil/ichkil-python](https://github.com/Ichkil/ichkil-python) · © 2026 Maaouia BenHamed
