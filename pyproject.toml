@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "ichkil"
-version = "1.0.0"
+version = "1.1.0"
 description = "Arabic Tashkeel (diacritization) — a tiny, self-contained ONNX model with a clean Python API"
 readme = "README.md"
 requires-python = ">=3.9"

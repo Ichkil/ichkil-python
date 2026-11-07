@@ -1,6 +1,6 @@
 """ichkil — Arabic Tashkeel (diacritization) in Python.
 
-A tiny, self-contained ONNX model (≈5 MB, CPU-only) that assigns harakat,
+A tiny, self-contained ONNX model (≈22 MB, CPU-only) that assigns harakat,
 shadda and tanwin to bare Arabic text. The model is downloaded from
 Hugging Face on first use and cached locally.
 

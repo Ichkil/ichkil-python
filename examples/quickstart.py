@@ -3,7 +3,7 @@
 Run:
     python examples/quickstart.py
 
-The model is downloaded from Hugging Face on first run (~5 MB) and cached
+The model is downloaded from Hugging Face on first run (~22 MB) and cached
 under ``~/.cache/huggingface``; afterwards this script runs offline.
 """
 

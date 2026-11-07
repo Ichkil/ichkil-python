@@ -18,14 +18,14 @@ GOLDEN = json.loads((Path(__file__).parent / "golden.json").read_text(encoding="
 VECTORS = GOLDEN["vectors"]
 
 
-def test_label_table_covers_all_13_labels():
-    assert P.NUM_LABELS == 13
-    assert len(P.LABEL_TO_COMBO) == 13
+def test_label_table_covers_all_16_labels():
+    assert P.NUM_LABELS == 16
+    assert len(P.LABEL_TO_COMBO) == 16
     # labels 0 and 1 carry no diacritic
     assert P.LABEL_TO_COMBO[0] == ""
     assert P.LABEL_TO_COMBO[1] == ""
     # labels 2..12 are the eleven harakat / shadda / tanwin combinations
-    assert all(P.LABEL_TO_COMBO[i] for i in range(2, 13))
+    assert all(P.LABEL_TO_COMBO[i] for i in range(2, 16))
     # shadda+haraka combos contain the shadda mark
     assert "\u0651" in P.LABEL_TO_COMBO[7]
     assert "\u0651" in P.LABEL_TO_COMBO[8]
@@ -34,9 +34,13 @@ def test_label_table_covers_all_13_labels():
     assert P.LABEL_TO_COMBO[10] == "\u064b"
     assert P.LABEL_TO_COMBO[11] == "\u064c"
     assert P.LABEL_TO_COMBO[12] == "\u064d"
+    # shadda + tanwin (model v0.3)
+    assert P.LABEL_TO_COMBO[13] == "\u0651\u064b"
+    assert P.LABEL_TO_COMBO[14] == "\u0651\u064c"
+    assert P.LABEL_TO_COMBO[15] == "\u0651\u064d"
 
 
-@pytest.mark.parametrize("label", [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12])
+@pytest.mark.parametrize("label", list(range(2, 16)))
 def test_label_to_combo_roundtrip(label: int):
     combo = P.label_to_combo(label)
     assert combo
@@ -50,7 +54,7 @@ def test_combo_to_label_unknown_defaults_to_zero():
 
 def test_label_to_combo_out_of_range():
     assert P.label_to_combo(-1) == ""
-    assert P.label_to_combo(13) == ""
+    assert P.label_to_combo(16) == ""
 
 
 @pytest.mark.parametrize(
@@ -63,9 +67,8 @@ def test_label_to_combo_out_of_range():
         ("a", False),
         ("1", False),
         (" ", False),
-        # tatweel is inside the reference letter range (core + JS both use
-        # [\u0621-\u064A]); strip_diacritics removes it from input before attach.
-        ("\u0640", True),
+        # tatweel is not a letter (contract v0.3: U+0621..U+063A, U+0641..U+064A)
+        ("\u0640", False),
         ("\u0650", False),  # kasra is a diacritic, not a letter
     ],
 )

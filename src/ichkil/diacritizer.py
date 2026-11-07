@@ -109,7 +109,7 @@ class Diacritizer:
 
     # ------------------------------------------------------------------ #
     def predict_labels(self, text: str) -> list[int]:
-        """Predicted label id (0..12) for every character of ``text``."""
+        """Predicted label id (0..15) for every character of ``text``."""
         if text is None:
             raise TypeError("text must be a string")
         base = P.strip_diacritics(str(text))

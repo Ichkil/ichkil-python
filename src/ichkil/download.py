@@ -32,7 +32,7 @@ __all__ = [
 ]
 
 DEFAULT_REPO_ID = "ichkil/ichkil"
-DEFAULT_REVISION = "main"
+DEFAULT_REVISION = "v0.3.0"  # pinned model release (see CHANGELOG)
 
 _SHA256_BLOCK_SIZE = 1 << 20
 

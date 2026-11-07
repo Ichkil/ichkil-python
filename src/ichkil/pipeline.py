@@ -2,9 +2,10 @@
 
 The model emits exactly one label per input character:
 
-    0        non-letter token (space / punctuation) or padding
+    0        non-letter token (space / punctuation / digit / Latin) or padding
     1        letter carries no diacritic
-    2 .. 12  the eleven harakat / shadda / tanwin combinations
+    2 .. 15  the harakat / shadda / tanwin combinations
+             (13..15 = shadda + tanwin, added in model v0.3)
 
 This module is the single source of truth shared by inference and the tests,
 and it mirrors the reference implementation in the core repository
@@ -15,6 +16,7 @@ Keep the three in sync.
 from __future__ import annotations
 
 import re
+import unicodedata
 from collections.abc import Mapping, Sequence
 
 __all__ = [
@@ -29,6 +31,7 @@ __all__ = [
     "is_arabic_letter",
     "label_to_combo",
     "combo_to_label",
+    "normalize_text",
     "strip_diacritics",
     "encode",
     "argmax",
@@ -37,7 +40,7 @@ __all__ = [
 ]
 
 # A single Arabic letter (the characters the model may decorate).
-AR_LETTER_RE = re.compile(r"[\u0621-\u064A]")
+AR_LETTER_RE = re.compile(r"[\u0621-\u063A\u0641-\u064A]")
 
 # Any Arabic diacritic / harakat code point (stripped from input first).
 AR_DIACRITIC_RE = re.compile(r"[\u0610-\u061A\u064B-\u065F\u0670\u06D6-\u06ED]")
@@ -47,7 +50,7 @@ TATWEEL = "\u0640"
 
 LABEL_NON_LETTER = 0
 LABEL_NONE = 1
-NUM_LABELS = 13
+NUM_LABELS = 16
 
 # label id -> canonical diacritic combination string
 LABEL_TO_COMBO: tuple[str, ...] = (
@@ -64,13 +67,16 @@ LABEL_TO_COMBO: tuple[str, ...] = (
     "\u064b",  # 10 tanwin fatha
     "\u064c",  # 11 tanwin damma
     "\u064d",  # 12 tanwin kasra
+    "\u0651\u064b",  # 13 shadda + tanwin fatha
+    "\u0651\u064c",  # 14 shadda + tanwin damma
+    "\u0651\u064d",  # 15 shadda + tanwin kasra
 )
 
 COMBO_TO_LABEL: dict[str, int] = {combo: idx for idx, combo in enumerate(LABEL_TO_COMBO) if combo}
 
 
 def is_arabic_letter(ch: str) -> bool:
-    """Return ``True`` if ``ch`` is a single Arabic letter (U+0621..U+064A)."""
+    """Return ``True`` if ``ch`` is an Arabic letter (U+0621..U+063A, U+0641..U+064A)."""
     return bool(AR_LETTER_RE.fullmatch(ch))
 
 
@@ -86,13 +92,37 @@ def combo_to_label(combo: str) -> int:
     return COMBO_TO_LABEL.get(combo, LABEL_NON_LETTER)
 
 
+_CHAR_MAP = {
+    "\u0671": "\u0627",  # alef wasla -> alef
+    "\u06cc": "\u064a",  # farsi yeh -> yeh
+    "\u06a9": "\u0643",  # keheh -> kaf
+    "\u06c1": "\u0647",  # heh goal -> heh
+    "\u00a0": " ",  # no-break space
+}
+_ZERO_WIDTH_RE = re.compile(r"[\u200b-\u200f\ufeff]")
+_WS_RE = re.compile(r"\s+")
+
+
+def normalize_text(text: str) -> str:
+    """Canonical form used by the model (mirror of the core ``normalize_text``).
+
+    Unicode NFC, presentation variants mapped to base Arabic letters,
+    zero-width characters removed, whitespace runs collapsed, trimmed.
+    Diacritics are kept (see :func:`strip_diacritics`).
+    """
+    text = unicodedata.normalize("NFC", text)
+    text = "".join(_CHAR_MAP.get(c, c) for c in text)
+    text = _ZERO_WIDTH_RE.sub("", text)
+    return _WS_RE.sub(" ", text).strip()
+
+
 def strip_diacritics(text: str) -> str:
-    """Return ``text`` with all diacritics and tatweel removed.
+    """Normalize ``text``, then remove all diacritics and tatweel.
 
     Letters, spaces and punctuation are preserved so the result stays aligned
-    with the original character positions.
+    with the characters the model sees.
     """
-    text = AR_DIACRITIC_RE.sub("", text)
+    text = AR_DIACRITIC_RE.sub("", normalize_text(text))
     if TATWEEL in text:
         text = text.replace(TATWEEL, "")
     return text

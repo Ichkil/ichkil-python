@@ -1,6 +1,6 @@
 # ichkil — Arabic Tashkeel for Python
 
-> Vocalize bare Arabic text with a tiny, self-contained ONNX model (≈5 MB, CPU-only,
+> Vocalize bare Arabic text with a tiny, self-contained ONNX model (≈22 MB, CPU-only,
 > no GPU, no tokenizer, no server). One call, fully offline after the first run.
 
 [![CI](https://github.com/Ichkil/ichkil-python/actions/workflows/ci.yml/badge.svg)](https://github.com/Ichkil/ichkil-python/actions/workflows/ci.yml)
@@ -39,16 +39,16 @@ import ichkil
 
 # one-liner (lazy model download on first call, then cached)
 ichkil.diacritize("العلم نور والجهل ظلمة")
-# -> 'الْعِلْمِ نُورٌ وَالْجَهْلُ ظُلْمَةُ'
+# -> 'الْعِلْمُ نُورٌ وَالْجَهْلُ ظُلْمَةٌ'
 
 # explicit control
 from ichkil import Diacritizer
 
 d = Diacritizer()                      # downloads + verifies + caches the model
 d.diacritize("القهوة جميلة في الصباح")
-# -> 'الْقَهْوَةِ جَمِيلَةٌ فِي الصَّبَاحِ'
+# -> 'الْقَهْوَةُ جَمِيلَةٌ فِي الصَّبَاحِ'
 
-labels = d.predict_labels("كتاب")      # [4, 2, 1, 4]  (one label id per character, 0..12)
+labels = d.predict_labels("كتاب")      # [4, 2, 1, 3]  (one label id per character, 0..15)
 
 # fully offline: point at local files
 d = Diacritizer.from_file("./model.onnx")
@@ -73,11 +73,11 @@ ichkil --model ./model.onnx "محمد"    # offline mode
 | Item | Description |
 | --- | --- |
 | `ichkil.diacritize(text: str) -> str` | Vocalize text (module-level convenience, lazy default model). |
-| `ichkil.predict_labels(text: str) -> list[int]` | Label id (0–12) per character. |
-| `Diacritizer` | Constructor: `repo_id`, `revision`, `cache_dir`, `token`, `verify_checksum`, `num_threads`. |
+| `ichkil.predict_labels(text: str) -> list[int]` | Label id (0–15) per character. |
+| `Diacritizer` | Constructor: `repo_id`, `revision` (default `"v0.3.0"`), `cache_dir`, `token`, `verify_checksum`, `num_threads`. |
 | `Diacritizer.from_file(model_path, config_path=None)` | Build from local `model.onnx` (+ `config.json` beside it). |
 | `Diacritizer.diacritize(text)` / `.predict_labels(text)` | Instance methods (same behavior). |
-| `ichkil.pipeline` | Pure text helpers: `strip_diacritics`, `encode`, `decode`, `attach`, label tables. |
+| `ichkil.pipeline` | Pure text helpers: `normalize_text`, `strip_diacritics`, `encode`, `decode`, `attach`, label tables. |
 | Errors | `IchkilError` ← `ChecksumError`, `ModelLoadError`, `InferenceError`. |
 | `ichkil.reset_default()` | Drop the lazily-created default instance (useful in tests). |
 
@@ -93,23 +93,29 @@ The model predicts exactly one label per input character:
 | 3 | damma (ـُ) | 10 | tanwin fatha (ـً) |
 | 4 | kasra (ـِ) | 11 | tanwin damma (ـٌ) |
 | 5 | sukun (ـْ) | 12 | tanwin kasra (ـٍ) |
-| 6 | shadda (ـّ) | | |
+| 6 | shadda (ـّ) | 13 | shadda + tanwin fatha (ـًّ) |
+| | | 14 | shadda + tanwin damma (ـٌّ) |
+| | | 15 | shadda + tanwin kasra (ـٍّ) |
 
-Already-vocalized input is stripped first, so `diacritize` is idempotent.
+Input is normalized first (Unicode NFC, ٱ→ا, ی→ي, ک→ك, zero-width characters
+removed, whitespace collapsed) and existing marks are stripped, so vocalized and
+bare input give the same result. Labels predicted on non-letters are
+unspecified and never attached.
 Non-Arabic characters (Latin letters, digits, punctuation, spaces) pass through
 unchanged.
 
 ## Model provenance
 
-- Repository: [`ichkil/ichkil`](https://huggingface.co/ichkil/ichkil)
-  (`model.onnx`, `config.json`, `SHA256SUMS`)
-- SHA-256 of `model.onnx`: `9055816b214346b0a8044a4a8deceb36e818dffd0b04699715ea23883bf54744`
-- Contract: `input_ids` int64 `[batch, seq]` → `logits` float32 `[batch, seq, 13]`;
-  sequence length fully dynamic (up to `max_seq_len = 1024` in the golden contract)
-- Quality: DER 2.80 % on the reference evaluation set; ONNX output is bit-identical
-  to the PyTorch reference (equivalence verified)
-- The cross-runtime golden vectors shipped in `tests/golden.json` are a verbatim
-  copy of the core repository's `golden/vectors.json`
+- Repository: [`ichkil/ichkil`](https://huggingface.co/ichkil/ichkil), pinned to the
+  **`v0.3.0`** tag by default (`Diacritizer(revision="v0.1.0")` loads the previous
+  13-label model).
+- SHA-256 of `model.onnx` (v0.3.0): `9779e1aca89cebc77a9b92037b7d700c422cdf6c3774d4883f4652f641f3f705`
+- Contract: `input_ids` int64 `[batch, seq]` → `logits` float32 `[batch, seq, 16]`;
+  dynamic length, tested up to 1024 characters per call.
+- Quality (v0.3.0): DER 2.32 % on Fadel et al. 2019 (classical), 2.14 % on WikiNews
+  (modern Arabic); the ONNX artifact scores identically to the PyTorch reference.
+- The cross-runtime golden vectors in `tests/golden.json` are a verbatim copy of the
+  core repository's `golden/vectors.json`.
 
 ## Development
 
@@ -117,7 +123,7 @@ unchanged.
 python -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 pytest                                   # pure pipeline tests (no network)
-pytest -m integration                     # + model tests (downloads once, ~5 MB)
+pytest -m integration                     # + model tests (downloads once, ~22 MB)
 ruff check . && ruff format --check .    # lint
 ```
 

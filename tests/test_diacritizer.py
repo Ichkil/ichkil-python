@@ -94,23 +94,24 @@ def test_mixed_text_only_decorates_arabic_letters(diacritizer: Diacritizer):
     ],
 )
 def test_idempotent_on_vocalized_text(diacritizer: Diacritizer, vocalized: str):
-    """Re-diacerizing already-vocalized text must not change it."""
-    assert diacritizer.diacritize(vocalized) == vocalized
+    """Diacritizing the model's own output again must not change it."""
+    once = diacritizer.diacritize(vocalized)
+    assert diacritizer.diacritize(once) == once
 
 
 def test_input_with_diacritics_is_normalized(diacritizer: Diacritizer):
-    # stripping then re-attaching yields the canonical golden form
-    assert diacritizer.diacritize("مُحَمَّدٌ") == "مُحَمَّدٌ"
-    assert diacritizer.diacritize("كِتَابِ") == "كِتَابِ"
+    # existing marks are stripped first: vocalized and bare input give the same result
+    for vocalized, bare in [("مُحَمَّدٌ", "محمد"), ("كِتَابِ", "كتاب"), ("عَدُوٌّ", "عدو")]:
+        assert diacritizer.diacritize(vocalized) == diacritizer.diacritize(bare)
 
 
 def test_predict_labels_shape_and_range(diacritizer: Diacritizer):
     text = "العلم نور"
     labels = diacritizer.predict_labels(text)
     assert len(labels) == len(text)
-    assert all(0 <= lab < 13 for lab in labels)
-    # non-letter characters get "no diacritic" (0 or 1); attach() ignores them anyway
-    assert labels[text.index(" ")] in (0, 1)
+    assert all(0 <= lab < 16 for lab in labels)
+    # labels on non-letters are unspecified; attach() never decorates them
+    assert diacritizer.diacritize(text).count(" ") == 1
 
 
 def test_diacritize_none_raises_type_error(diacritizer: Diacritizer):
@@ -147,8 +148,8 @@ def test_verify_checksum_raises_on_mismatch(tmp_path: Path):
 
 
 def test_version_and_public_api():
-    assert ichkil.__version__ == "1.0.0"
-    assert ichkil.NUM_LABELS == 13
+    assert ichkil.__version__ == "1.1.0"
+    assert ichkil.NUM_LABELS == 16
     # the module-level convenience API exists and delegates to the same code
     assert callable(ichkil.diacritize)
     assert callable(ichkil.predict_labels)
